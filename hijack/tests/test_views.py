@@ -35,13 +35,13 @@ class TestAcquireUserView:
         assert (
             admin_client.get(self.user_detail_url).content == b'{"username": "admin"}'
         )
-        response = admin_client.post(self.url, {"user_pk": bob.pk})
+        response = admin_client.post(self.url, {"hijack_user": bob.pk})
         assert response.status_code == 302
         assert admin_client.get(self.user_detail_url).content == b'{"username": "bob"}'
 
     def test_acquire__denied(self, eve_client, bob):
         assert eve_client.get(self.user_detail_url).content == b'{"username": "eve"}'
-        response = eve_client.post(self.url, {"user_pk": bob.pk})
+        response = eve_client.post(self.url, {"hijack_user": bob.pk})
         assert response.status_code == 403
         assert eve_client.get(self.user_detail_url).content == b'{"username": "eve"}'
 
@@ -49,7 +49,7 @@ class TestAcquireUserView:
         assert (
             admin_client.get(self.user_detail_url).content == b'{"username": "admin"}'
         )
-        response = admin_client.post(self.url, {"user_pk": bob.pk})
+        response = admin_client.post(self.url, {"hijack_user": bob.pk})
         assert response.status_code == 302
         assert response["Location"] == "/accounts/profile/"
 
@@ -59,7 +59,7 @@ class TestAcquireUserView:
         )
         response = admin_client.post(
             self.url,
-            {"user_pk": bob.pk, "next": "/somewhere/over/the/rainbow"},
+            {"hijack_user": bob.pk, "next": "/somewhere/over/the/rainbow"},
         )
         assert response.status_code == 302
         assert response["Location"] == "/somewhere/over/the/rainbow"
@@ -75,7 +75,7 @@ class TestReleaseUserView:
     user_detail_url = reverse_lazy("user-detail")
 
     def test_get__405(self, admin_client, alice):
-        admin_client.post(self.acquire_url, {"user_pk": alice.pk})
+        admin_client.post(self.acquire_url, {"hijack_user": alice.pk})
         assert admin_client.get(self.release_url).status_code == 405
 
     def test_post__not_hijacked(self, admin_client):
@@ -130,11 +130,11 @@ class TestIntegration:
         assert (
             admin_client.get(self.user_detail_url).content == b'{"username": "admin"}'
         )
-        response = admin_client.post(self.acquire_url, {"user_pk": bob.pk})
+        response = admin_client.post(self.acquire_url, {"hijack_user": bob.pk})
         assert response.status_code == 302
         assert admin_client.get(self.user_detail_url).content == b'{"username": "bob"}'
 
-        response = admin_client.post(self.acquire_url, {"user_pk": alice.pk})
+        response = admin_client.post(self.acquire_url, {"hijack_user": alice.pk})
         assert response.status_code == 302
         assert (
             admin_client.get(self.user_detail_url).content == b'{"username": "alice"}'
@@ -165,7 +165,7 @@ class TestIntegration:
         session.set_expiry(expire_date)
         session.save()
         time.sleep(0.1)
-        admin_client.post(self.acquire_url, {"user_pk": bob.pk})
+        admin_client.post(self.acquire_url, {"hijack_user": bob.pk})
         assert expire_date == Session.objects.get().expire_date
         time.sleep(0.1)
         admin_client.post(self.release_url)

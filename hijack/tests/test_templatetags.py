@@ -1,3 +1,5 @@
+import re
+
 from django.urls import reverse
 
 from hijack.templatetags import hijack as templatetags
@@ -8,7 +10,11 @@ from .test_app.permissions import allow_all, deny_all
 def test_can_hijack__integration(admin_client):
     response = admin_client.get(reverse("user-list"))
     assert response.status_code == 200
-    assert b'<button type="submit">hijack admin</button>' in response.content
+    re_button = (
+        b'<button type="submit" name="hijack_user" '
+        b'value=".+">hijack admin</button>'
+    )
+    assert re.search(re_button, response.content)
 
 
 def test_can_hijack__import_string(settings):

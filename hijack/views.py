@@ -84,10 +84,10 @@ class AcquireUserView(
         return func(hijacker=self.request.user, hijacked=self.get_object())
 
     def get_object(self, queryset=None):
-        return get_object_or_404(self.model, pk=self.request.POST["user_pk"])
+        return get_object_or_404(self.model, pk=self.request.POST["hijack_user"])
 
     def dispatch(self, request, *args, **kwargs):
-        if "user_pk" not in self.request.POST:
+        if "hijack_user" not in self.request.POST:
             return HttpResponseBadRequest()
         return super().dispatch(request, *args, **kwargs)
 

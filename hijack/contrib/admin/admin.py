@@ -42,7 +42,6 @@ class HijackUserAdminMixin:
             "hijack/contrib/admin/button.html",
             {
                 "request": request,
-                "csrf_token": get_token(request),
                 "another_user": user,
                 "username": str(user),
                 "is_user_admin": self.model == type(user),
@@ -50,36 +49,25 @@ class HijackUserAdminMixin:
             },
         )
 
-    def get_changelist_instance(self, request):
-        # We inject the request for the CSRF token, see also:
-        # https://code.djangoproject.com/ticket/13659
+    def get_list_display(self, request):
+        """
+        Return a sequence containing the fields to be displayed on the
+        changelist.
+        """
         def hijack_field(obj):
             return self.hijack_button(request, obj)
 
         hijack_field.short_description = _("hijack user")
 
-        # we
-        list_display = [*self.get_list_display(request), hijack_field]
-        # Same as super method, see also:
-        # https://github.com/django/django/blob/76c0b32f826469320c59709d31e2f2126dd7c505/django/contrib/admin/options.py#L724-L750
-        list_display_links = self.get_list_display_links(request, list_display)
-        # Add the action checkboxes if any actions are available.
-        if self.get_actions(request):
-            list_display = ["action_checkbox", *list_display]
-        sortable_by = self.get_sortable_by(request)
-        ChangeList = self.get_changelist(request)
-        return ChangeList(
-            request,
-            self.model,
-            list_display,
-            list_display_links,
-            self.get_list_filter(request),
-            self.date_hierarchy,
-            self.get_search_fields(request),
-            self.get_list_select_related(request),
-            self.list_per_page,
-            self.list_max_show_all,
-            self.list_editable,
-            self,
-            sortable_by,
-        )
+        return [*super().get_list_display(request), hijack_field]
+
+    def response_action(self, request, queryset):
+        """
+        Handle an admin action. This is called if a request is POSTed to the
+        changelist; it returns an HttpResponse if the action was handled, and
+        None otherwise.
+        """
+        if "hijack_user" in request.POST:
+            from hijack.views import AcquireUserView
+            return AcquireUserView.as_view()(request)
+        return super().response_action(request, queryset)
